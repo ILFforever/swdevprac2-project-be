@@ -1,4 +1,4 @@
-const Car_Provider = require('../models/car_provider');
+const Car_Provider = require('../models/Car_Provider');
 const asyncHandler = require('express-async-handler');
 const Car = require('../models/Car');
 const ValidToken = require('../models/ValidToken');

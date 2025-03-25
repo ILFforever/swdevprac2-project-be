@@ -1,6 +1,6 @@
 const Rent = require('../models/Rent');
 const Car = require('../models/Car');
-const car_provider = require('../models/car_provider');
+const car_provider = require('../models/Car_Provider');
 
 exports.getCars = async (req, res, next) => {
     try {

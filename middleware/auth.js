@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Car_Provider = require('../models/car_provider');
+const Car_Provider = require('../models/Car_Provider');
 const ValidToken = require('../models/ValidToken');
 
 // Protect routes
