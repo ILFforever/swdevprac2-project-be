@@ -3,30 +3,46 @@ const Car = require('../models/Car');
 const User = require('../models/User');
 const asyncHandler = require('express-async-handler');
 
-// @desc    Get all rents
+// @desc    Get user's rents (for regular users)
 // @route   GET /api/v1/rents
 // @access  Private
-exports.getRents = asyncHandler(async (req, res, next) => {
+exports.getUserRents = asyncHandler(async (req, res, next) => {
+    // Only return rents belonging to the logged-in user
+    const query = Rent.find({ user: req.user.id }).populate({
+        path: 'car',
+        select: 'license_plate brand type model color manufactureDate available dailyRate tier provider_id'
+    });
+
+    const rents = await query;
+
+    res.status(200).json({
+        success: true,
+        count: rents.length,
+        data: rents
+    });
+});
+
+// @desc    Get all rents (for admins)
+// @route   GET /api/v1/rents/all
+// @access  Private/Admin
+exports.getAllRents = asyncHandler(async (req, res, next) => {
     let query;
 
-    if (req.user.role !== 'admin') {
-        query = Rent.find({ user: req.user.id }).populate({
+    // Filter by car ID if provided
+    if (req.params.carId) {
+        query = Rent.find({ car: req.params.carId }).populate({
             path: 'car',
             select: 'license_plate brand type model color manufactureDate available dailyRate tier provider_id'
         });
     } else {
-        if (req.params.carId) {
-            console.log(req.params.carId);
-            query = Rent.find({ car: req.params.carId }).populate({
-                path: 'car',
-                select: 'license_plate brand type model color manufactureDate available dailyRate tier provider_id'
-            });
-        } else {
-            query = Rent.find().populate({
-                path: 'car',
-                select: 'license_plate brand type model color manufactureDate available dailyRate tier provider_id'
-            });
-        }
+        // Get all rents
+        query = Rent.find().populate({
+            path: 'car',
+            select: 'license_plate brand type model color manufactureDate available dailyRate tier provider_id'
+        }).populate({
+            path: 'user',
+            select: 'name email telephone_number role'
+        });
     }
 
     const rents = await query;
@@ -49,6 +65,11 @@ exports.getRent = asyncHandler(async (req, res, next) => {
 
     if (!rent) {
         return res.status(404).json({ success: false, message: `No rent with the id of ${req.params.id}` });
+    }
+
+    // Check if the user is authorized to view this rent
+    if (rent.user.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(401).json({ success: false, message: `User ${req.user.id} is not authorized to view this rent` });
     }
 
     res.status(200).json({
@@ -133,8 +154,6 @@ exports.addRent = asyncHandler(async (req, res, next) => {
     });
 });
 
-
-
 // @desc    Update rent
 // @route   PUT /api/v1/rents/:id
 // @access  Private
@@ -207,14 +226,14 @@ exports.completeRent = asyncHandler(async (req, res, next) => {
     const actualReturnDate = today.toISOString(); // Converts to "YYYY-MM-DDTHH:mm:ss.sssZ" format
     const returnDate = new Date(rent.returnDate);
 
-let user = await User.findById(rent.user);
-if (user) {
-    user.total_spend += rent.price;
-    await user.save(); // This triggers pre-save middleware
-}
+    let user = await User.findById(rent.user);
+    if (user) {
+        user.total_spend += rent.price;
+        await user.save(); // This triggers pre-save middleware
+    }
    
     await Car.findByIdAndUpdate(rent.car, { available: true });
-    let daysLate = 0  ;
+    let daysLate = 0;
     let lateFee = 0;
     if (today > returnDate) {
         daysLate = Math.ceil((today - returnDate) / (1000 * 60 * 60 * 24));
@@ -236,7 +255,7 @@ if (user) {
         success: true,
         late_by: daysLate > 0 ? daysLate : 0,
         late_fee: lateFee > 0 ? lateFee : 0,
-        car_tier: rent.car.tier ,
+        car_tier: rent.car.tier,
         total_price: totalPrice,
         data: rent,
     });
