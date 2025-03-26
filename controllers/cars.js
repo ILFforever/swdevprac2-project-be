@@ -40,6 +40,7 @@ exports.getCars = async (req, res, next) => {
         const endIndex = page * limit;
         const total = await Car.countDocuments(query.getQuery());
         const totalCount = await Car.countDocuments(query.getQuery());
+        const totalMatchingCount = await Car.countDocuments(query.getQuery());
         query = query.skip(startIndex).limit(limit);
         
         // Execute the query
@@ -64,6 +65,7 @@ exports.getCars = async (req, res, next) => {
             success: true, 
             count: cars.length,  // Items in current page
             totalCount: totalCount,  // Total matching items across all pages
+            totalMatchingCount: totalMatchingCount,
             pagination,
             data: cars 
           });
