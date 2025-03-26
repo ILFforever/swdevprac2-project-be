@@ -39,7 +39,7 @@ exports.getCars = async (req, res, next) => {
         const startIndex = (page - 1) * limit;
         const endIndex = page * limit;
         const total = await Car.countDocuments(query.getQuery());
-        
+        const totalCount = await Car.countDocuments(query.getQuery());
         query = query.skip(startIndex).limit(limit);
         
         // Execute the query
@@ -62,10 +62,11 @@ exports.getCars = async (req, res, next) => {
         
         res.status(200).json({ 
             success: true, 
-            count: cars.length, 
+            count: cars.length,  // Items in current page
+            totalCount: totalCount,  // Total matching items across all pages
             pagination,
             data: cars 
-        });
+          });
     } catch (err) {
         console.error(err);
         res.status(400).json({ 
